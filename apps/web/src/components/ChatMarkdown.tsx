@@ -164,7 +164,7 @@ import {
   parseChangeRequestUrl,
   useOpenChangeRequestLink,
 } from "~/lib/openPullRequestLink";
-import { writeTextToClipboard } from "../hooks/useCopyToClipboard";
+import { useCopyToClipboard, writeTextToClipboard } from "../hooks/useCopyToClipboard";
 import { isPreviewSupportedInRuntime } from "../previewStateStore";
 import { isAbsolutePath, resolvePathLinkTarget } from "../terminal-links";
 import {
@@ -562,6 +562,85 @@ function nodeToPlainText(node: ReactNode): string {
   }
   return "";
 }
+
+const MarkdownInlineCode = memo(function MarkdownInlineCode({
+  codeText,
+  children,
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<"code"> & { readonly codeText: string }) {
+  const { copyToClipboard, isCopied } = useCopyToClipboard({
+    timeout: 1200,
+    target: "inline code",
+    onError: (error) => {
+      reportMarkdownActionFailure({ operation: "copy-inline-code" }, error);
+      toastManager.add(
+        stackedThreadToast({
+          type: "error",
+          title: "Failed to copy inline code",
+          description: error.message,
+        }),
+      );
+    },
+  });
+  const copyLabel = isCopied ? "Copied" : "Copy";
+
+  return (
+    <span className="chat-markdown-inline-code">
+      <code
+        {...props}
+        className={className}
+        onDoubleClick={(event) => {
+          if (
+            event.button !== 0 ||
+            event.altKey ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.shiftKey
+          ) {
+            return;
+          }
+          const selection = window.getSelection();
+          if (!selection) return;
+          const range = document.createRange();
+          range.selectNodeContents(event.currentTarget);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          event.preventDefault();
+        }}
+      >
+        {children}
+      </code>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-micro"
+              className="chat-markdown-chrome-action ms-0.5 align-text-bottom select-none"
+              aria-label={isCopied ? "Copied" : "Copy inline code"}
+              onClick={(event) => {
+                event.stopPropagation();
+                copyToClipboard(codeText, undefined);
+              }}
+            />
+          }
+        >
+          {isCopied ? (
+            <CheckIcon aria-hidden className="size-3" />
+          ) : (
+            <CopyIcon aria-hidden className="size-3" />
+          )}
+        </TooltipTrigger>
+        <TooltipPopup side="top">{copyLabel}</TooltipPopup>
+      </Tooltip>
+      <span className="sr-only" aria-live="polite">
+        {isCopied ? "Copied" : ""}
+      </span>
+    </span>
+  );
+});
 
 function extractCodeBlock(
   children: ReactNode,
@@ -2588,19 +2667,27 @@ function ChatMarkdown({
         );
       },
       code({ node, children, className, ...props }) {
-        if (node?.properties?.dataInlineCode != null) {
-          const codeText = nodeToPlainText(children);
-          const fileLinkMeta =
-            inlineCodeFileLinkMetaByText.get(codeText.trim()) ??
-            resolveInlineCodeFileLinkMeta(codeText, cwd, imageBaseDir ?? cwd);
-          if (fileLinkMeta) {
-            return fileLinkChip(
-              fileLinkMeta,
-              `\`${codeText}\``,
-              undefined,
-              inlineCodeFilePathCandidate(codeText) ?? codeText.trim(),
-            );
-          }
+        const isOrdinaryInlineCode = node?.properties?.dataInlineCode != null;
+        const codeText = nodeToPlainText(children);
+        const fileLinkMeta = isOrdinaryInlineCode
+          ? (inlineCodeFileLinkMetaByText.get(codeText.trim()) ??
+            resolveInlineCodeFileLinkMeta(codeText, cwd, imageBaseDir ?? cwd))
+          : null;
+        if (fileLinkMeta) {
+          return fileLinkChip(
+            fileLinkMeta,
+            `\`${codeText}\``,
+            undefined,
+            inlineCodeFilePathCandidate(codeText) ?? codeText.trim(),
+          );
+        }
+
+        if (isOrdinaryInlineCode && codeText.length > 0) {
+          return (
+            <MarkdownInlineCode {...props} className={className} codeText={codeText}>
+              {children}
+            </MarkdownInlineCode>
+          );
         }
         return (
           <code {...props} className={className}>

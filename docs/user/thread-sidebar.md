@@ -34,13 +34,26 @@ Right-click a pull request link in a thread and choose **Link to thread** to sho
 in the sidebar. The thread settles when the linked pull request merges if **Auto-settle merged
 threads** is enabled. Right-click the same link and choose **Unlink from thread** to remove it.
 
-On web and desktop, drag a pinned thread to change its position. On mobile, open the thread's menu
-and choose **Move up** or **Move down**. The order is stored by the server and appears on your
-other connected devices.
+On web and desktop, drag an active thread above or below another active thread to arrange your work.
+This active order is saved in the current client and survives reloads; it does not sync to your
+other devices. Newly active threads appear above the order you have already arranged. Thread
+dragging is paused while sidebar search is filtering the list.
 
-If reordering is unavailable for one environment, update the T3 Code server running in that
-environment. Older servers can still pin and unpin threads, but do not understand synced ordering;
-their pinned threads keep the default newest-first order below the ones you have arranged.
+Pinned ordering is separate and syncs through the server. Drag a pinned thread to change its
+position. You can also drag an active or settled thread into the pinned section to pin it, or drag a
+pinned thread below that section to unpin it. T3 Code asks first when **Unpin confirmation** is
+enabled.
+
+On mobile, open a pinned thread's menu and choose **Move up** or **Move down**. The order is stored
+by the server and appears on your other connected devices.
+
+If reordering is unavailable for one environment, T3 Code hides the drag and Move actions for its
+threads. Update the T3 Code server running in that environment to enable them. Older servers can
+still pin and unpin threads, but do not understand synced ordering; their pinned threads keep the
+default newest-first order below the ones you have arranged.
+
+Enable **Move answered threads to top** in General settings if you want an active, unpinned thread
+to return to the top when a newly observed agent answer completes. The setting is off by default.
 
 ## Environment artwork
 

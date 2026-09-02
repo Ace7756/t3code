@@ -1993,6 +1993,20 @@ export function GeneralSettingsPanel() {
           }
         />
 
+        <SettingsRow
+          {...searchableSetting("move-answered-threads-to-top")}
+          description="When an agent finishes a new answer, move that active thread to the top of the sidebar."
+          control={
+            <Switch
+              checked={settings.sidebarMoveAnsweredThreadsToTop}
+              onCheckedChange={(checked) =>
+                updateSettings({ sidebarMoveAnsweredThreadsToTop: Boolean(checked) })
+              }
+              aria-label="Move answered threads to top"
+            />
+          }
+        />
+
         {supportsAutoSettlement ? (
           <>
             <SettingsRow

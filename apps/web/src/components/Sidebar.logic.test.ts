@@ -20,6 +20,8 @@ import {
   isTrailingDoubleClick,
   orderItemsByPreferredIds,
   resolveProjectStatusIndicator,
+  resolveActiveThreadOrder,
+  resolveSidebarDropIntent,
   resolveThreadRowClassName,
   resolveSidebarThreadStatus,
   resolveThreadStatusPill,
@@ -859,6 +861,58 @@ describe("sortThreadsForSidebar", () => {
     ]);
 
     expect(sorted.map((thread) => thread.id)).toEqual(["newest", "stale-stamp"]);
+  });
+});
+
+describe("resolveActiveThreadOrder", () => {
+  it("places unseen threads first by fallback order and preserves the saved run", () => {
+    const threads = [
+      { key: "environment-local:saved-new", createdAt: "2026-03-09T12:00:00.000Z" },
+      { key: "environment-local:unseen-old", createdAt: "2026-03-09T10:00:00.000Z" },
+      { key: "environment-local:saved-old", createdAt: "2026-03-09T08:00:00.000Z" },
+      { key: "environment-local:unseen-new", createdAt: "2026-03-09T13:00:00.000Z" },
+    ];
+
+    const ordered = resolveActiveThreadOrder({
+      threads,
+      savedThreadKeys: [
+        "environment-local:stale",
+        "environment-local:saved-old",
+        "environment-local:saved-new",
+      ],
+      getThreadKey: (thread) => thread.key,
+    });
+
+    expect(ordered.map((thread) => thread.key)).toEqual([
+      "environment-local:unseen-new",
+      "environment-local:unseen-old",
+      "environment-local:saved-old",
+      "environment-local:saved-new",
+    ]);
+  });
+});
+
+describe("resolveSidebarDropIntent", () => {
+  it("keeps active-to-active local while preserving active-to-pinned pinning", () => {
+    const movedKey = "environment-local:thread-a";
+    const overKey = "environment-local:thread-b";
+
+    expect(
+      resolveSidebarDropIntent({
+        sourceSection: "active",
+        overSection: "active",
+        movedKey,
+        overKey,
+      }),
+    ).toEqual({ type: "reorder-active", movedKey, overKey });
+    expect(
+      resolveSidebarDropIntent({
+        sourceSection: "active",
+        overSection: "pinned",
+        movedKey,
+        overKey,
+      }),
+    ).toEqual({ type: "pin", movedKey, overKey });
   });
 });
 

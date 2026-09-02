@@ -128,6 +128,24 @@ describe("serializeRenderedMarkdownFragment", () => {
     expect(serializeRenderedMarkdownFragment(asNode(container))).toBe("run `git status` first");
   });
 
+  it("omits an inline-code copy control while preserving the surrounding Markdown", () => {
+    const inlineCode = new FakeElement("SPAN", ["chat-markdown-inline-code"]).append(
+      new FakeElement("CODE").append(new FakeText("ios/v1")),
+      new FakeElement("BUTTON").append(new FakeText("Copy inline code")),
+    );
+    const container = new FakeElement("DIV").append(
+      new FakeElement("P").append(
+        new FakeText("switch to "),
+        inlineCode,
+        new FakeText(" before release"),
+      ),
+    );
+
+    expect(serializeRenderedMarkdownFragment(asNode(container))).toBe(
+      "switch to `ios/v1` before release",
+    );
+  });
+
   it("copies the complete quote, source, and comment instead of the comment-only chip label", () => {
     const citation = {
       version: 1 as const,

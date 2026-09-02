@@ -603,6 +603,114 @@ export function sortThreadsForSidebar<
   );
 }
 
+export function resolveActiveThreadOrder<
+  T extends {
+    readonly createdAt: string;
+    readonly unsettledAt?: string | null | undefined;
+  },
+>(input: {
+  readonly threads: readonly T[];
+  readonly savedThreadKeys: readonly string[];
+  readonly getThreadKey: (thread: T) => string;
+}): T[] {
+  const fallback = [...input.threads].toSorted(
+    (left, right) =>
+      activeThreadAnchorTimestampMs(right) - activeThreadAnchorTimestampMs(left) ||
+      input.getThreadKey(left).localeCompare(input.getThreadKey(right)),
+  );
+  const threadByKey = new Map(fallback.map((thread) => [input.getThreadKey(thread), thread]));
+  const savedKeys = [...new Set(input.savedThreadKeys.filter((key) => threadByKey.has(key)))];
+  const savedSet = new Set(savedKeys);
+  return [
+    ...fallback.filter((thread) => !savedSet.has(input.getThreadKey(thread))),
+    ...savedKeys.map((key) => threadByKey.get(key)!),
+  ];
+}
+
+type LatestTurnAnswerState = {
+  readonly state: string;
+  readonly turnId: string;
+  readonly completedAt: string | null;
+  readonly assistantMessageId: string | null;
+};
+
+export type AnswerCompletionObservation = {
+  readonly turnId: string;
+  readonly completed: boolean;
+};
+
+export function getAnswerCompletionObservation(
+  latestTurn: LatestTurnAnswerState | null | undefined,
+): AnswerCompletionObservation | null {
+  if (latestTurn == null) return null;
+  return {
+    turnId: latestTurn.turnId,
+    completed:
+      latestTurn.state === "completed" &&
+      latestTurn.completedAt !== null &&
+      Number.isFinite(Date.parse(latestTurn.completedAt)) &&
+      latestTurn.assistantMessageId !== null,
+  };
+}
+
+export function findNewCompletedAnswerKeys(input: {
+  readonly previous: ReadonlyMap<string, AnswerCompletionObservation | null> | null;
+  readonly current: ReadonlyMap<string, AnswerCompletionObservation | null>;
+}): string[] {
+  if (input.previous === null) return [];
+  const completedKeys: string[] = [];
+  for (const [key, observation] of input.current) {
+    const previous = input.previous.get(key);
+    if (
+      observation?.completed === true &&
+      input.previous.has(key) &&
+      (previous?.turnId !== observation.turnId || previous.completed === false)
+    ) {
+      completedKeys.push(key);
+    }
+  }
+  return completedKeys;
+}
+
+export function planAnsweredThreadOrder(input: {
+  readonly orderedKeys: readonly string[];
+  readonly newlyCompletedKeys: readonly string[];
+  readonly completedAtByKey: ReadonlyMap<string, string | null>;
+}): string[] {
+  const currentKeys = new Set(input.orderedKeys);
+  const promoted = [...new Set(input.newlyCompletedKeys)]
+    .filter((key) => currentKeys.has(key))
+    .toSorted(
+      (left, right) =>
+        firstValidTimestampMs(input.completedAtByKey.get(right) ?? null) -
+        firstValidTimestampMs(input.completedAtByKey.get(left) ?? null),
+    );
+  const promotedKeys = new Set(promoted);
+  return [...promoted, ...input.orderedKeys.filter((key) => !promotedKeys.has(key))];
+}
+
+type SidebarDropSection = "pinned" | "active" | "settled";
+
+export function resolveSidebarDropIntent(input: {
+  readonly sourceSection: SidebarDropSection;
+  readonly overSection: SidebarDropSection | null;
+  readonly movedKey: string;
+  readonly overKey: string | null;
+}):
+  | { readonly type: "reorder-active"; readonly movedKey: string; readonly overKey: string }
+  | { readonly type: "pin"; readonly movedKey: string; readonly overKey: string }
+  | { readonly type: "none" } {
+  const { movedKey, overKey, overSection, sourceSection } = input;
+  if (overKey === null || movedKey === overKey) return { type: "none" };
+  if (sourceSection === "active" && overSection === "active") {
+    return { type: "reorder-active", movedKey, overKey };
+  }
+  if ((sourceSection === "active" || sourceSection === "settled") && overSection === "pinned") {
+    return { type: "pin", movedKey, overKey };
+  }
+  return { type: "none" };
+}
+
 // Pinned-reorder key math and the keyed sort live in client-runtime
 // (state/thread-sort) so web and mobile compute identical pinned orders.
 export {
