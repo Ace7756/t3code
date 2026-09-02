@@ -189,6 +189,15 @@ describe("ClientSettings sidebar", () => {
     expect(decodeClientSettingsPatch({ confirmThreadUnpin: true }).confirmThreadUnpin).toBe(true);
     expect(() => decodeClientSettingsPatch({ confirmThreadUnpin: "yes" })).toThrow();
   });
+
+  it("keeps answered-thread auto-bump opt-in and patchable", () => {
+    expect(decodeClientSettings({}).sidebarMoveAnsweredThreadsToTop).toBe(false);
+    expect(
+      decodeClientSettingsPatch({ sidebarMoveAnsweredThreadsToTop: true })
+        .sidebarMoveAnsweredThreadsToTop,
+    ).toBe(true);
+    expect(() => decodeClientSettingsPatch({ sidebarMoveAnsweredThreadsToTop: "yes" })).toThrow();
+  });
 });
 
 describe("ClientSettings context window meter", () => {

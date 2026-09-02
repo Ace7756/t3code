@@ -146,6 +146,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["combine matching repositories environments sidebar"],
   },
   {
+    id: "move-answered-threads-to-top",
+    title: "Move answered threads to top",
+    to: "/settings/general",
+    searchTerms: ["agent response answer thread sidebar top"],
+  },
+  {
     id: "auto-settle-inactive-threads",
     title: "Auto-settle inactive threads",
     to: "/settings/general",

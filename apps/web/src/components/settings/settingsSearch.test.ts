@@ -90,6 +90,13 @@ describe("searchSettings", () => {
     expect(searchSettings("administrative access")[0]?.id).toBe("connections-environment");
   });
 
+  it("finds the answered-thread sidebar toggle", () => {
+    expect(searchSettings("agent response top")[0]).toMatchObject({
+      id: "move-answered-threads-to-top",
+      to: "/settings/general",
+    });
+  });
+
   it("lists thread confirmations in panel order", () => {
     expect(searchSettings("confirmation").map((item) => item.id)).toEqual([
       "unpin-confirmation",
